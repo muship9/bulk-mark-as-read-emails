@@ -4,14 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
+	"google.golang.org/api/option"
 	"log"
 	"net/http"
 	"os"
+)
 
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/option"
+const (
+	USER                = "me"        // 認証済みユーザー
+	QUERY_OPTION_UNREAD = "is:unread" // 未読のみを対象とする
 )
 
 // Retrieve a token, saves the token, then returns the generated client.
@@ -89,17 +93,19 @@ func main() {
 		log.Fatalf("Unable to retrieve Gmail client: %v", err)
 	}
 
-	user := "me"
-	r, err := srv.Users.Labels.List(user).Do()
+	ml, err := srv.Users.Messages.List(USER).Q(QUERY_OPTION_UNREAD).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve labels: %v", err)
+		log.Fatalf("Failed to Retrieve Messages: %v", err)
 	}
-	if len(r.Labels) == 0 {
-		fmt.Println("No labels found.")
+	if len(ml.Messages) == 0 {
+		fmt.Println("No Messages found.")
 		return
 	}
-	fmt.Println("Labels:")
-	for _, l := range r.Labels {
-		fmt.Printf("- %s\n", l.Name)
+	for _, l := range ml.Messages {
+		m, err := srv.Users.Messages.Get(USER, l.Id).Do()
+		if err != nil {
+			log.Fatalf("Failed to Retrieve Message: %v", err)
+		}
+		fmt.Printf("- %s\n", m)
 	}
 }
