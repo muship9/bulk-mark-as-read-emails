@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	USER                = "me"        // 認証済みユーザー
-	QUERY_OPTION_UNREAD = "is:unread" // 未読のみを対象とする
+	USER = "me" // 認証済みユーザー
 )
 
 // Retrieve a token, saves the token, then returns the generated client.
@@ -82,7 +81,7 @@ func main() {
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
+	config, err := google.ConfigFromJSON(b, gmail.MailGoogleComScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
@@ -93,19 +92,26 @@ func main() {
 		log.Fatalf("Unable to retrieve Gmail client: %v", err)
 	}
 
-	ml, err := srv.Users.Messages.List(USER).Q(QUERY_OPTION_UNREAD).Do()
+	ml, err := srv.Users.Messages.List(USER).Q("is:unread and !is:important").Do()
 	if err != nil {
 		log.Fatalf("Failed to Retrieve Messages: %v", err)
 	}
 	if len(ml.Messages) == 0 {
-		fmt.Println("No Messages found.")
+		fmt.Println("Exiting because the message was not found.")
 		return
 	}
+
+	var messageIdList []string
 	for _, l := range ml.Messages {
-		m, err := srv.Users.Messages.Get(USER, l.Id).Do()
-		if err != nil {
-			log.Fatalf("Failed to Retrieve Message: %v", err)
-		}
-		fmt.Printf("- %s\n", m)
+		messageIdList = append(messageIdList, l.Id)
 	}
+	request := gmail.BatchModifyMessagesRequest{
+		Ids:            messageIdList,
+		RemoveLabelIds: []string{"UNREAD"},
+	}
+	err = srv.Users.Messages.BatchModify(USER, &request).Do()
+	if err != nil {
+		log.Fatalf("Failed to Update Messages: %v", err)
+	}
+	fmt.Println("Bulk update has been completed.")
 }
