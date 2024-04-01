@@ -33,7 +33,6 @@ func getClient(config *oauth2.Config) *http.Client {
 
 // Request a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	fmt.Println(config)
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n%v\n", authURL)
@@ -92,7 +91,7 @@ func main() {
 		log.Fatalf("Unable to retrieve Gmail client: %v", err)
 	}
 
-	ml, err := srv.Users.Messages.List(USER).Q("is:unread and !is:important").Do()
+	ml, err := srv.Users.Messages.List(USER).Q("is:unread -is:important").Do()
 	if err != nil {
 		log.Fatalf("Failed to Retrieve Messages: %v", err)
 	}
